@@ -24,5 +24,5 @@ This is **Phase 2** of the project and focuses on:
 
 ---
 
-## ⚙️ Project Structure
+## Project Structure
 Will be updated soon based on next phases
