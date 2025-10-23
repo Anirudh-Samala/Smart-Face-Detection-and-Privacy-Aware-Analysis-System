@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Face Analysis – Phase 2 Demo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="/static/main.css">
+</head>
+<body>
+  <header class="site-header">
+    <h1>Face Analysis – Upload</h1>
+    <p class="sub">Upload an image, optionally enable privacy (blur), and view results with basic metrics.</p>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <form id="upload-form" method="POST" action="/detect" enctype="multipart/form-data">
+        <div class="grid">
+          <div>
+            <label class="label">Select image</label>
+            <input id="image" class="file-input" type="file" name="image" accept="image/*" required>
+            <label class="checkbox"><input type="checkbox" name="privacy"> Blur faces (privacy)</label>
+            <button id="runBtn" type="submit">Run Detection</button>
+          </div>
+          <div>
+            <label class="label">Preview</label>
+            <div id="preview" class="preview muted">No image selected.</div>
+          </div>
+        </div>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2 class="card-title">Result</h2>
+      <div id="result" class="result muted">Result will appear here.</div>
+      <div id="metrics" class="metrics">
+        <div class="metric"><span class="k">Faces</span><span id="mFaces" class="v">—</span></div>
+        <div class="metric"><span class="k">Latency</span><span id="mLatency" class="v">—</span></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <small>Phase-2 UI Extension • Flask + OpenCV (Haar) • Demo</small>
+  </footer>
+
+  <script>
+    const fileInput = document.getElementById("image");
+    const preview = document.getElementById("preview");
+    const form = document.getElementById("upload-form");
+    const result = document.getElementById("result");
+    const runBtn = document.getElementById("runBtn");
+    const mFaces = document.getElementById("mFaces");
+    const mLatency = document.getElementById("mLatency");
+
+    // Live preview
+    fileInput.addEventListener("change", () => {
+      preview.innerHTML = "Loading preview…";
+      const f = fileInput.files[0];
+      if (!f) { preview.innerHTML = "No image selected."; return; }
+      const url = URL.createObjectURL(f);
+      preview.innerHTML = `<img class="img" src="${url}" alt="preview">`;
+    });
+
+    // Submit + show result + metrics
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!fileInput.files[0]) return;
+
+      runBtn.disabled = true;
+      runBtn.textContent = "Processing…";
+      result.classList.remove("muted");
+      result.innerHTML = "<div class='spinner'></div>";
+      mFaces.textContent = "—";
+      mLatency.textContent = "—";
+
+      const fd = new FormData(form);
+      try {
+        const r = await fetch("/detect", { method: "POST", body: fd });
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        const blob = await r.blob();
+        const url = URL.createObjectURL(blob);
+        result.innerHTML = `<img class="img" src="${url}" alt="result">`;
+
+        // Read simple headers we set in Flask
+        mFaces.textContent = r.headers.get("X-Faces") ?? "—";
+        const ms = r.headers.get("X-LatencyMs");
+        mLatency.textContent = ms ? (ms + " ms") : "—";
+      } catch (err) {
+        result.innerHTML = `<p class="error">Error: ${err}</p>`;
+      } finally {
+        runBtn.disabled = false;
+        runBtn.textContent = "Run Detection";
+      }
+    });
+  </script>
+</body>
+</html>
