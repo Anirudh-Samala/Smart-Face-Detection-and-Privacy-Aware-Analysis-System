@@ -25,20 +25,24 @@ def detect():
     file.save(in_path)
 
     img = cv2.imread(in_path)
+
+    # ---- measure latency for validation/metrics ----
     t0 = time.time()
-    boxes = detect_faces(img)  # list[(x,y,w,h)]
+    boxes = detect_faces(img)
+    latency_ms = int((time.time() - t0) * 1000)
+    # ------------------------------------------------
+
     if blur:
         img = blur_regions(img, boxes)
     else:
         for (x, y, w, h) in boxes:
-            cv2.rectangle(img, (x, y), (x+w, y+h), (0,255,0), 2)
-    latency_ms = int((time.time() - t0) * 1000)
+            cv2.rectangle(img, (x, y), (x+w, y+h), (0, 255, 0), 2)
 
     out_path = os.path.join(OUT_DIR, f"result_{os.path.basename(in_path)}")
     cv2.imwrite(out_path, img)
 
+    # send image + metrics headers
     resp = send_file(out_path, mimetype="image/jpeg")
-    # Simple metrics for the UI
     resp.headers["X-Faces"] = str(len(boxes))
     resp.headers["X-LatencyMs"] = str(latency_ms)
     return resp
